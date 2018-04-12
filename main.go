@@ -1,14 +1,13 @@
 package main
 
 import (
-	"image"
 	"math"
-	"os"
 
-	_ "image/png"
+	"github.com/CyrusRoshan/pongg/player"
 
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/pixelgl"
+
 	"golang.org/x/image/colornames"
 )
 
@@ -17,10 +16,13 @@ func main() {
 }
 
 func run() {
+	width, height := pixelgl.PrimaryMonitor().Size()
+
 	cfg := pixelgl.WindowConfig{
-		Title:  "Pongg",
-		Bounds: pixel.R(0, 0, 1024, 768),
-		VSync:  true,
+		Title:     "Pongg",
+		Bounds:    pixel.R(0, 0, width/2, height/2),
+		VSync:     true,
+		Resizable: true,
 	}
 
 	win, err := pixelgl.NewWindow(cfg)
@@ -28,45 +30,34 @@ func run() {
 		panic(err)
 	}
 
-	win.Clear(colornames.White)
+	win.Clear(colornames.Red)
 
-	player1 := NewPlayer("sprites/paddle.png")
-
-	canvas := pixelgl.NewCanvas(pixel.R(-160/2, -120/2, 160/2, 120/2))
+	const SCALE = 15
+	canvas := pixelgl.NewCanvas(pixel.R(-width/SCALE, -height/SCALE, width/SCALE, height/SCALE))
 	cam := pixel.IM
 	canvas.SetMatrix(cam)
 
-	win.SetMatrix(pixel.IM.Scaled(pixel.ZV,
-		math.Min(
-			win.Bounds().W()/canvas.Bounds().W(),
-			win.Bounds().H()/canvas.Bounds().H(),
-		),
-	).Moved(win.Bounds().Center()))
+	// create players
+	players := player.MakePlayers(canvas, 2)
 
 	for !win.Closed() {
-		win.Clear(colornames.Black)
+		win.SetMatrix(pixel.IM.Scaled(pixel.ZV,
+			math.Min(
+				win.Bounds().W()/canvas.Bounds().W(),
+				win.Bounds().H()/canvas.Bounds().H(),
+			),
+		).Moved(win.Bounds().Center()))
+
+		win.Clear(colornames.Red)
 		canvas.Clear(colornames.Black)
 
-		player1.GetInput(win)
-		player1.Draw(canvas)
+		// player get input
+		// player draw
+		players.GetInput(win)
+		players.Draw(canvas)
 
 		canvas.Draw(win, pixel.IM.Moved(canvas.Bounds().Center()))
 
 		win.Update()
 	}
-}
-
-func loadPicture(path string) (pixel.Picture, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-
-	defer file.Close()
-	img, _, err := image.Decode(file)
-	if err != nil {
-		return nil, err
-	}
-
-	return pixel.PictureDataFromImage(img), nil
 }
