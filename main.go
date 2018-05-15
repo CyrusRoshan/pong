@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"github.com/CyrusRoshan/pong/player"
+	"github.com/CyrusRoshan/pong/utils"
 
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/pixelgl"
@@ -34,8 +35,10 @@ func run() {
 
 	// make canvas (drawing to canvas, then scaling to window)
 	const SCALE = 15
-	canvas := pixelgl.NewCanvas(pixel.R(-width/SCALE, -height/SCALE, width/SCALE, height/SCALE))
-	cam := pixel.IM
+	var (
+		canvas = pixelgl.NewCanvas(pixel.R(-width/SCALE, -height/SCALE, width/SCALE, height/SCALE))
+		cam    = pixel.IM
+	)
 	canvas.SetMatrix(cam)
 
 	// create players
@@ -63,5 +66,7 @@ func run() {
 		players.Draw(canvas)
 		canvas.Draw(win, pixel.IM.Moved(canvas.Bounds().Center()))
 		win.Update()
+
+		utils.DisplayFPS(win, cfg.Title)
 	}
 }

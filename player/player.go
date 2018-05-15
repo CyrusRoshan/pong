@@ -99,8 +99,10 @@ func (ph *PlayerHolder) Draw(t pixel.Target) {
 	}
 }
 
-const PLAYER_ACCEL = 200
-const PLAYER_MAX_SPEED = float64(80)
+const (
+	PLAYER_ACCEL     = 200
+	PLAYER_MAX_SPEED = float64(80)
+)
 
 type player struct {
 	playerNum int
