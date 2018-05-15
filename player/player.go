@@ -4,7 +4,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/CyrusRoshan/pongg/utils"
+	"github.com/CyrusRoshan/pong/utils"
 
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/pixelgl"
@@ -197,7 +197,7 @@ func (p *player) getInput(win *pixelgl.Window, keypairs []keyPair) {
 		} else {
 			if *pair.speedVar > 0 {
 				*pair.speedVar -= (ds / 2)
-			} else { // if < 0
+			} else if *pair.speedVar < 0 {
 				*pair.speedVar += (ds / 2)
 			}
 

@@ -3,7 +3,7 @@ package main
 import (
 	"math"
 
-	"github.com/CyrusRoshan/pongg/player"
+	"github.com/CyrusRoshan/pong/player"
 
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/pixelgl"
@@ -16,6 +16,7 @@ func main() {
 }
 
 func run() {
+	// set up window
 	width, height := pixelgl.PrimaryMonitor().Size()
 
 	cfg := pixelgl.WindowConfig{
@@ -29,9 +30,9 @@ func run() {
 	if err != nil {
 		panic(err)
 	}
-
 	win.Clear(colornames.Red)
 
+	// make canvas (drawing to canvas, then scaling to window)
 	const SCALE = 15
 	canvas := pixelgl.NewCanvas(pixel.R(-width/SCALE, -height/SCALE, width/SCALE, height/SCALE))
 	cam := pixel.IM
@@ -40,7 +41,9 @@ func run() {
 	// create players
 	players := player.MakePlayers(canvas, 2)
 
+	// game loop
 	for !win.Closed() {
+		// make canvas fit window
 		win.SetMatrix(pixel.IM.Scaled(pixel.ZV,
 			math.Min(
 				win.Bounds().W()/canvas.Bounds().W(),
@@ -48,16 +51,16 @@ func run() {
 			),
 		).Moved(win.Bounds().Center()))
 
+		// get input, change model
+		players.GetInput(win)
+
+		// clear window before redrawing
 		win.Clear(colornames.Red)
 		canvas.Clear(colornames.Black)
 
-		// player get input
-		// player draw
-		players.GetInput(win)
+		// draw to canvas -> window -> update
 		players.Draw(canvas)
-
 		canvas.Draw(win, pixel.IM.Moved(canvas.Bounds().Center()))
-
 		win.Update()
 	}
 }
