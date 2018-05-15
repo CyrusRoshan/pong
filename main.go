@@ -53,6 +53,7 @@ func run() {
 
 		// get input, change model
 		players.GetInput(win)
+		players.RestrictBoundsTo(canvas.Bounds())
 
 		// clear window before redrawing
 		win.Clear(colornames.Red)

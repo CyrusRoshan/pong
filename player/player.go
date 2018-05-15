@@ -87,6 +87,12 @@ func (ph *PlayerHolder) GetInput(win *pixelgl.Window) {
 	}
 }
 
+func (ph *PlayerHolder) RestrictBoundsTo(bounds pixel.Rect) {
+	for i := 0; i < len(ph.players); i++ {
+		ph.players[i].restrictBoundsTo(bounds)
+	}
+}
+
 func (ph *PlayerHolder) Draw(t pixel.Target) {
 	for i := 0; i < len(ph.players); i++ {
 		ph.players[i].draw(t)
@@ -123,7 +129,7 @@ func newPlayer(picLocation string, isTeamTwo bool, playerNumber int) *player {
 		direction = -1
 	}
 
-	return &player{
+	p := player{
 		playerNum: playerNumber,
 		sheet:     pic,
 
@@ -138,6 +144,10 @@ func newPlayer(picLocation string, isTeamTwo bool, playerNumber int) *player {
 
 		lastRender: time.Now(),
 	}
+
+	p.rect = p.sprite.Frame()
+
+	return &p
 }
 
 func (p *player) draw(t pixel.Target) {
@@ -216,6 +226,28 @@ func (p *player) getInput(win *pixelgl.Window, keypairs []keyPair) {
 	}
 
 	p.rect = p.rect.Moved(movedVector)
+}
+
+func (p *player) restrictBoundsTo(bounds pixel.Rect) {
+	movedVec := pixel.Vec{}
+
+	if p.rect.Min.X < bounds.Min.X {
+		movedVec.X = bounds.Min.X - p.rect.Min.X
+		p.xSpeed = 0
+	} else if p.rect.Max.X > bounds.Max.X {
+		movedVec.X = bounds.Max.X - p.rect.Max.X
+		p.xSpeed = 0
+	}
+
+	if p.rect.Min.Y < bounds.Min.Y {
+		movedVec.Y = bounds.Min.Y - p.rect.Min.Y
+		p.ySpeed = 0
+	} else if p.rect.Max.Y > bounds.Max.Y {
+		movedVec.Y = bounds.Max.Y - p.rect.Max.Y
+		p.ySpeed = 0
+	}
+
+	p.rect = p.rect.Moved(movedVec)
 }
 
 func (p *player) timeSinceLastRender() float64 {
