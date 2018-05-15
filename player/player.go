@@ -2,126 +2,41 @@ package player
 
 import (
 	"math"
-	"time"
 
+	"github.com/CyrusRoshan/pong/physics"
 	"github.com/CyrusRoshan/pong/utils"
 
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/pixelgl"
 )
 
-const PLAYER_SPRITE = "sprites/paddle.png"
-
-type PlayerHolder struct {
-	players []*player
-}
-
-func MakePlayers(canvas *pixelgl.Canvas, totalPlayers int) *PlayerHolder {
-	ph := PlayerHolder{}
-
-	ph.players = make([]*player, totalPlayers)
-	bounds := canvas.Bounds()
-
-	for i := 0; i < totalPlayers; i++ {
-		ph.players[i] = newPlayer(PLAYER_SPRITE, (i%2 == 1), i)
-
-		xPos := bounds.Center().X
-		if i%2 == 1 {
-			xPos += bounds.W() / 4
-		} else {
-			xPos -= bounds.W() / 4
-		}
-
-		ph.players[i].rect = ph.players[i].rect.Moved(pixel.Vec{
-			X: xPos,
-			Y: bounds.Center().Y,
-		})
-	}
-
-	return &ph
-}
-
-func (ph *PlayerHolder) GetInput(win *pixelgl.Window) {
-	for i := 0; i < len(ph.players); i++ {
-		p := ph.players[i]
-
-		var keypairs []keyPair
-
-		if i == 0 {
-			keypairs = []keyPair{
-				keyPair{
-					key:        pixelgl.KeyW,
-					mirrorKey:  pixelgl.KeyS,
-					isVertical: true,
-					speedVar:   &p.ySpeed,
-					accelVar:   PLAYER_ACCEL,
-				},
-				keyPair{
-					key:        pixelgl.KeyD,
-					mirrorKey:  pixelgl.KeyA,
-					isVertical: false,
-					speedVar:   &p.xSpeed,
-					accelVar:   PLAYER_ACCEL,
-				},
-			}
-		} else {
-			keypairs = []keyPair{
-				keyPair{
-					key:        pixelgl.KeyUp,
-					mirrorKey:  pixelgl.KeyDown,
-					isVertical: true,
-					speedVar:   &p.ySpeed,
-					accelVar:   PLAYER_ACCEL,
-				},
-				keyPair{
-					key:        pixelgl.KeyRight,
-					mirrorKey:  pixelgl.KeyLeft,
-					isVertical: false,
-					speedVar:   &p.xSpeed,
-					accelVar:   PLAYER_ACCEL,
-				},
-			}
-		}
-
-		p.getInput(win, keypairs)
-	}
-}
-
-func (ph *PlayerHolder) RestrictBoundsTo(bounds pixel.Rect) {
-	for i := 0; i < len(ph.players); i++ {
-		ph.players[i].restrictBoundsTo(bounds)
-	}
-}
-
-func (ph *PlayerHolder) Draw(t pixel.Target) {
-	for i := 0; i < len(ph.players); i++ {
-		ph.players[i].draw(t)
-	}
-}
-
 const (
-	PLAYER_ACCEL     = 200
-	PLAYER_MAX_SPEED = float64(80)
+	SPRITE = "sprites/paddle.png"
+
+	MOVE_ACCEL          = 200
+	BOOST_REVERSE_ACCEL = 3
+
+	CONSTANT_ACCEL = 0.5
+	STOP_ACCEL     = 5
+	WALL_ACCEL     = 0.3
+
+	MAX_SPEED = float64(80)
 )
 
-type player struct {
+type Player struct {
 	playerNum int
-	sheet     pixel.Picture
+	direction float64
 
+	sheet  pixel.Picture
 	frame  pixel.Rect
 	sprite *pixel.Sprite
 
-	direction float64
-	rect      pixel.Rect
-
-	xSpeed float64
-	ySpeed float64
-
-	lastRender time.Time
+	Rect  pixel.Rect
+	Speed physics.Speed
 }
 
-func newPlayer(picLocation string, isTeamTwo bool, playerNumber int) *player {
-	pic, err := utils.LoadPicture(picLocation)
+func NewPlayer(isTeamTwo bool, playerNumber int, location pixel.Vec) *Player {
+	pic, err := utils.LoadPicture(SPRITE)
 	if err != nil {
 		panic(err)
 	}
@@ -131,55 +46,54 @@ func newPlayer(picLocation string, isTeamTwo bool, playerNumber int) *player {
 		direction = -1
 	}
 
-	p := player{
+	p := Player{
 		playerNum: playerNumber,
-		sheet:     pic,
-
-		xSpeed: float64(0),
-		ySpeed: float64(0),
-
-		rect:      pixel.Rect{},
 		direction: float64(direction),
 
+		sheet:  pic,
 		frame:  pixel.Rect{},
 		sprite: pixel.NewSprite(pic, pic.Bounds()),
 
-		lastRender: time.Now(),
+		Rect: pixel.Rect{},
+		Speed: physics.Speed{
+			X: float64(0),
+			Y: float64(0),
+		},
 	}
 
-	p.rect = p.sprite.Frame()
+	p.Rect = p.sprite.Frame().
+		Moved(location).
+		Moved(pixel.Vec{X: 0, Y: -p.sprite.Frame().Size().Y / 2})
 
 	return &p
 }
 
-func (p *player) draw(t pixel.Target) {
+func (p *Player) Draw(t pixel.Target) {
 	p.sprite.Draw(t,
 		pixel.IM.
 			ScaledXY(
 				pixel.ZV,
 				pixel.Vec{X: p.direction, Y: 1}).
-			Moved(p.rect.Center()))
+			Moved(p.Rect.Center()))
 }
 
-type keyPair struct {
-	key        pixelgl.Button
-	mirrorKey  pixelgl.Button
-	isVertical bool
-	speedVar   *float64
-	accelVar   int
+type KeyPair struct {
+	Key        pixelgl.Button
+	MirrorKey  pixelgl.Button
+	IsVertical bool
+	SpeedVar   *float64
+	AccelVar   int
 }
 
-func (p *player) getInput(win *pixelgl.Window, keypairs []keyPair) {
-	dt := p.timeSinceLastRender()
-
+func (p *Player) GetInput(win *pixelgl.Window, Keypairs []KeyPair, dt float64) {
 	movedVector := pixel.Vec{}
 
-	for i := 0; i < len(keypairs); i++ {
-		pair := keypairs[i]
+	for i := 0; i < len(Keypairs); i++ {
+		pair := Keypairs[i]
 
-		ds := dt * float64(pair.accelVar)
-		keyPressed := win.Pressed(pair.key)
-		mirrorkeyPressed := win.Pressed(pair.mirrorKey)
+		ds := dt * float64(pair.AccelVar)
+		keyPressed := win.Pressed(pair.Key)
+		mirrorkeyPressed := win.Pressed(pair.MirrorKey)
 
 		accelerate := keyPressed || mirrorkeyPressed
 		if keyPressed && mirrorkeyPressed {
@@ -188,73 +102,44 @@ func (p *player) getInput(win *pixelgl.Window, keypairs []keyPair) {
 
 		if accelerate {
 			if keyPressed {
-				if *pair.speedVar < 0 {
-					ds *= 4
+				if *pair.SpeedVar < 0 {
+					ds *= BOOST_REVERSE_ACCEL
 				}
 
-				*pair.speedVar += ds
+				*pair.SpeedVar += ds
 			} else { // if mirrorkeyPressed
-				if *pair.speedVar > 0 {
-					ds *= 4
+				if *pair.SpeedVar > 0 {
+					ds *= BOOST_REVERSE_ACCEL
 				}
 
-				*pair.speedVar -= ds
+				*pair.SpeedVar -= ds
 			}
 
-			if *pair.speedVar > PLAYER_MAX_SPEED {
-				*pair.speedVar = PLAYER_MAX_SPEED
-			} else if *pair.speedVar < -PLAYER_MAX_SPEED {
-				*pair.speedVar = -PLAYER_MAX_SPEED
+			if *pair.SpeedVar > MAX_SPEED {
+				*pair.SpeedVar = MAX_SPEED
+			} else if *pair.SpeedVar < -MAX_SPEED {
+				*pair.SpeedVar = -MAX_SPEED
 			}
 		} else {
-			if *pair.speedVar > 0 {
-				*pair.speedVar -= (ds / 2)
-			} else if *pair.speedVar < 0 {
-				*pair.speedVar += (ds / 2)
+			if *pair.SpeedVar > 0 {
+				*pair.SpeedVar -= ds * CONSTANT_ACCEL
+			} else if *pair.SpeedVar < 0 {
+				*pair.SpeedVar += ds * CONSTANT_ACCEL
 			}
 
-			if math.Abs(*pair.speedVar) < 5 {
-				*pair.speedVar = 0
+			if math.Abs(*pair.SpeedVar) < STOP_ACCEL {
+				*pair.SpeedVar = 0
 			}
 		}
 
-		ddist := *pair.speedVar * dt
+		ddist := *pair.SpeedVar * dt
 
-		if pair.isVertical {
+		if pair.IsVertical {
 			movedVector.Y += ddist
 		} else {
 			movedVector.X += ddist
 		}
 	}
 
-	p.rect = p.rect.Moved(movedVector)
-}
-
-func (p *player) restrictBoundsTo(bounds pixel.Rect) {
-	movedVec := pixel.Vec{}
-
-	if p.rect.Min.X < bounds.Min.X {
-		movedVec.X = bounds.Min.X - p.rect.Min.X
-		p.xSpeed = 0
-	} else if p.rect.Max.X > bounds.Max.X {
-		movedVec.X = bounds.Max.X - p.rect.Max.X
-		p.xSpeed = 0
-	}
-
-	if p.rect.Min.Y < bounds.Min.Y {
-		movedVec.Y = bounds.Min.Y - p.rect.Min.Y
-		p.ySpeed = 0
-	} else if p.rect.Max.Y > bounds.Max.Y {
-		movedVec.Y = bounds.Max.Y - p.rect.Max.Y
-		p.ySpeed = 0
-	}
-
-	p.rect = p.rect.Moved(movedVec)
-}
-
-func (p *player) timeSinceLastRender() float64 {
-	diff := time.Since(p.lastRender).Seconds()
-	p.lastRender = time.Now()
-
-	return diff
+	p.Rect = p.Rect.Moved(movedVector)
 }

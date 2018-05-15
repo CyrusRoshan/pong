@@ -3,7 +3,7 @@ package main
 import (
 	"math"
 
-	"github.com/CyrusRoshan/pong/player"
+	"github.com/CyrusRoshan/pong/gameholder"
 	"github.com/CyrusRoshan/pong/utils"
 
 	"github.com/faiface/pixel"
@@ -42,7 +42,7 @@ func run() {
 	canvas.SetMatrix(cam)
 
 	// create players
-	players := player.MakePlayers(canvas, 2)
+	game := gameholder.MakeGame(canvas, 2)
 
 	// game loop
 	for !win.Closed() {
@@ -55,15 +55,15 @@ func run() {
 		).Moved(win.Bounds().Center()))
 
 		// get input, change model
-		players.GetInput(win)
-		players.RestrictBoundsTo(canvas.Bounds())
+		game.GetChanges(win)
+		game.RestrictBoundsTo(canvas.Bounds())
 
 		// clear window before redrawing
 		win.Clear(colornames.Red)
 		canvas.Clear(colornames.Black)
 
 		// draw to canvas -> window -> update
-		players.Draw(canvas)
+		game.Draw(canvas)
 		canvas.Draw(win, pixel.IM.Moved(canvas.Bounds().Center()))
 		win.Update()
 
