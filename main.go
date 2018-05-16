@@ -57,6 +57,7 @@ func run() {
 		// get input, change model
 		game.GetChanges(win)
 		game.RestrictBoundsTo(canvas.Bounds())
+		game.CalculateCollisions()
 
 		// clear window before redrawing
 		win.Clear(colornames.Red)

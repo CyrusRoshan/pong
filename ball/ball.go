@@ -1,6 +1,8 @@
 package ball
 
 import (
+	"math"
+
 	"github.com/CyrusRoshan/pong/physics"
 	"github.com/CyrusRoshan/pong/utils"
 	"github.com/faiface/pixel"
@@ -9,9 +11,11 @@ import (
 const (
 	SPRITE = "sprites/ball.png"
 
+	PLAYER_HIT_SPEED_BOOST = 50
+
 	// values under 1 decelerate, values above 1, accelerate
 	WALL_ACCEL     = 0.8
-	CONSTANT_ACCEL = 0.95
+	CONSTANT_ACCEL = 0.75
 )
 
 type Ball struct {
@@ -53,11 +57,11 @@ func (b *Ball) Draw(t pixel.Target) {
 }
 
 func (b *Ball) CalculateMovement(dt float64) {
-	b.Speed.X *= CONSTANT_ACCEL
-	b.Speed.Y *= CONSTANT_ACCEL
+	b.Speed.X *= math.Pow(CONSTANT_ACCEL, dt)
+	b.Speed.Y *= math.Pow(CONSTANT_ACCEL, dt)
 
 	b.Rect = b.Rect.Moved(pixel.Vec{
-		X: b.Speed.X,
-		Y: b.Speed.Y,
+		X: b.Speed.X * dt,
+		Y: b.Speed.Y * dt,
 	})
 }

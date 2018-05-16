@@ -1,6 +1,7 @@
 package gameholder
 
 import (
+	"math"
 	"time"
 
 	"github.com/CyrusRoshan/pong/physics"
@@ -98,19 +99,50 @@ func (gh *GameHolder) GetChanges(win *pixelgl.Window) {
 	}
 }
 
-func (gh *GameHolder) RestrictBoundsTo(bounds pixel.Rect) {
-	speedMult, movedVec := physics.RestrictBoundsTo(gh.ball.Rect, bounds, ball.WALL_ACCEL)
-	gh.ball.Speed.X *= speedMult.X
-	gh.ball.Speed.Y *= speedMult.Y
+func (gh *GameHolder) CalculateCollisions() {
+	for i := 0; i < len(gh.players); i++ {
+		if physics.Intersects(gh.players[i].Rect, gh.ball.Rect) {
+			diff := physics.CalculateDiff(gh.ball.Rect, gh.players[i].Rect)
 
-	gh.ball.Rect = gh.ball.Rect.Moved(movedVec)
+			if math.Abs(gh.players[i].Speed.X) > math.Abs(gh.players[i].Speed.Y) { // only move either X or Y
+				diff.Y = 0
+			} else {
+				diff.X = 0
+			}
+			gh.ball.Rect = gh.ball.Rect.Moved(diff)
+
+			multVec := physics.CalculateCollisionVector(gh.players[i].Rect, gh.ball.Rect)
+
+			// gh.ball.Speed.X += multVec.X
+			// if multVec.X == -1 {
+			// 	gh.ball.Speed.X += math.Copysign(ball.PLAYER_HIT_SPEED_BOOST, gh.ball.Speed.X)
+			// }
+
+			// gh.ball.Speed.Y *= multVec.Y
+			// if multVec.Y == -1 {
+			// 	gh.ball.Speed.Y += math.Copysign(ball.PLAYER_HIT_SPEED_BOOST, gh.ball.Speed.Y)
+			// }
+		}
+	}
+}
+
+func (gh *GameHolder) RestrictBoundsTo(bounds pixel.Rect) {
+	if !physics.Contains(bounds, gh.ball.Rect) {
+		speedMult, movedVec := physics.CalculateBoundsRestriction(gh.ball.Rect, bounds)
+		gh.ball.Speed.X *= speedMult.X * ball.WALL_ACCEL
+		gh.ball.Speed.Y *= speedMult.Y * ball.WALL_ACCEL
+
+		gh.ball.Rect = gh.ball.Rect.Moved(movedVec)
+	}
 
 	for i := 0; i < len(gh.players); i++ {
-		speedMult, movedVec := physics.RestrictBoundsTo(gh.players[i].Rect, bounds, player.WALL_ACCEL)
-		gh.players[i].Speed.X *= speedMult.X
-		gh.players[i].Speed.Y *= speedMult.Y
+		if !physics.Contains(bounds, gh.players[i].Rect) {
+			speedMult, movedVec := physics.CalculateBoundsRestriction(gh.players[i].Rect, bounds)
+			gh.players[i].Speed.X *= speedMult.X * player.WALL_ACCEL
+			gh.players[i].Speed.Y *= speedMult.Y * player.WALL_ACCEL
 
-		gh.players[i].Rect = gh.players[i].Rect.Moved(movedVec)
+			gh.players[i].Rect = gh.players[i].Rect.Moved(movedVec)
+		}
 	}
 }
 

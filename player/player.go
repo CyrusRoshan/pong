@@ -24,7 +24,7 @@ const (
 )
 
 type Player struct {
-	playerNum int
+	PlayerNum int
 	direction float64
 
 	sheet  pixel.Picture
@@ -47,7 +47,7 @@ func NewPlayer(isTeamTwo bool, playerNumber int, location pixel.Vec) *Player {
 	}
 
 	p := Player{
-		playerNum: playerNumber,
+		PlayerNum: playerNumber,
 		direction: float64(direction),
 
 		sheet:  pic,
