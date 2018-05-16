@@ -104,24 +104,26 @@ func (gh *GameHolder) CalculateCollisions() {
 		if physics.Intersects(gh.players[i].Rect, gh.ball.Rect) {
 			diff := physics.CalculateDiff(gh.ball.Rect, gh.players[i].Rect)
 
-			if math.Abs(gh.players[i].Speed.X) > math.Abs(gh.players[i].Speed.Y) { // only move either X or Y
-				diff.Y = 0
-			} else {
-				diff.X = 0
+			gh.ball.Speed.X *= -1
+			gh.ball.Speed.X *= ball.PLAYER_HIT_ACCEL
+			gh.ball.Speed.X += gh.players[i].Speed.X * ball.PLAYER_HIT_SPEED_MULT * math.Abs(diff.X)
+
+			gh.ball.Speed.Y *= -1
+			gh.ball.Speed.Y *= ball.PLAYER_HIT_ACCEL
+			gh.ball.Speed.Y += gh.players[i].Speed.Y * math.Abs(diff.Y)
+
+			// offset ball
+			moveVec := pixel.Vec{
+				X: diff.X,
+				Y: diff.Y,
 			}
-			gh.ball.Rect = gh.ball.Rect.Moved(diff)
+			if math.Abs(gh.players[i].Speed.X) > math.Abs(gh.players[i].Speed.Y) { // only move either X or Y
+				moveVec.Y = 0
+			} else {
+				moveVec.X = 0
+			}
 
-			multVec := physics.CalculateCollisionVector(gh.players[i].Rect, gh.ball.Rect)
-
-			// gh.ball.Speed.X += multVec.X
-			// if multVec.X == -1 {
-			// 	gh.ball.Speed.X += math.Copysign(ball.PLAYER_HIT_SPEED_BOOST, gh.ball.Speed.X)
-			// }
-
-			// gh.ball.Speed.Y *= multVec.Y
-			// if multVec.Y == -1 {
-			// 	gh.ball.Speed.Y += math.Copysign(ball.PLAYER_HIT_SPEED_BOOST, gh.ball.Speed.Y)
-			// }
+			gh.ball.Rect = gh.ball.Rect.Moved(moveVec)
 		}
 	}
 }
@@ -135,8 +137,24 @@ func (gh *GameHolder) RestrictBoundsTo(bounds pixel.Rect) {
 		gh.ball.Rect = gh.ball.Rect.Moved(movedVec)
 	}
 
+	bounds1 := pixel.Rect{
+		Max: pixel.Vec{X: 0, Y: bounds.Max.Y},
+		Min: bounds.Min,
+	}
+	bounds2 := pixel.Rect{
+		Max: bounds.Max,
+		Min: pixel.Vec{X: 0, Y: bounds.Min.Y},
+	}
+
 	for i := 0; i < len(gh.players); i++ {
-		if !physics.Contains(bounds, gh.players[i].Rect) {
+		b := pixel.Rect{}
+		if i%2 == 0 {
+			b = bounds1
+		} else {
+			b = bounds2
+		}
+
+		if !physics.Contains(b, gh.players[i].Rect) {
 			speedMult, movedVec := physics.CalculateBoundsRestriction(gh.players[i].Rect, bounds)
 			gh.players[i].Speed.X *= speedMult.X * player.WALL_ACCEL
 			gh.players[i].Speed.Y *= speedMult.Y * player.WALL_ACCEL

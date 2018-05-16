@@ -13,8 +13,8 @@ import (
 const (
 	SPRITE = "sprites/paddle.png"
 
-	MOVE_ACCEL          = 200
-	BOOST_REVERSE_ACCEL = 3
+	MOVE_ACCEL          = 400
+	BOOST_REVERSE_ACCEL = 7
 
 	CONSTANT_ACCEL = 0.5
 	STOP_ACCEL     = 5

@@ -71,16 +71,3 @@ func CalculateBoundsRestriction(object pixel.Rect, bounds pixel.Rect) (speedMult
 
 	return
 }
-
-func CalculateCollisionVector(object pixel.Rect, immobile pixel.Rect) (speedMult Speed) {
-	speedMult = Speed{
-		X: immobile.Center().X - object.Center().X,
-		Y: 1,
-	}
-
-	if object.Max.X >= immobile.Max.X {
-		speedMult.X *= -1
-	}
-
-	return
-}
